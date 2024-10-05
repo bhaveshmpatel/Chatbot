@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chatbot</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background-color: #f0f0f0;
+    }
+    
+    #chat-container {
+      background-color: #fff;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+      width: 400px;
+    }
+    
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    
+    #chat-history {
+      height: 300px;
+      overflow-y: scroll;
+    }
+    
+    .user-message {
+      text-align: right;
+      padding: 10px;
+      background-color: #f0f0f0;
+      border-radius: 10px;
+      margin-bottom: 5px;
+    }
+    
+    .bot-message {
+      text-align: left;
+      padding: 10px;
+      background-color: #e0f0e0;
+      border-radius: 10px;
+      margin-bottom: 5px;
+    }
+    
+    form {
+      display: flex;
+    }
+    
+    input {
+      flex-grow: 1;
+      margin-right: 10px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    
+    button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #loader {
+      display: none; /* Hide by default */
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+  </style>
+</head>
+<body>
+  <div id="chat-container">
+    <h1>Chatbot</h1>
+    <div id="chat-history"></div>
+    <form id="chat-form">
+      <input type="text" id="user-input" placeholder="Enter your message" required>
+      <button type="submit">Send</button>
+    </form>
+  </div>
+  <div id="loader">
+    <img src="loader.gif" width="150px" alt="Loading...">
+  </div>
+
+  <script>
+    const chatHistory = document.getElementById('chat-history');
+    const userInput = document.getElementById('user-input');
+    const form = document.getElementById('chat-form');
+
+    // Load chat history from local storage on page load
+    function loadChatHistory() {
+      const history = JSON.parse(localStorage.getItem('chatHistory')) || [];
+      history.forEach(message => {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = message.type === 'user' ? 'user-message' : 'bot-message';
+        messageDiv.textContent = message.text;
+        chatHistory.appendChild(messageDiv);
+      });
+      chatHistory.scrollTop = chatHistory.scrollHeight; // Scroll to the bottom
+    }
+
+    async function sendMessage() {
+      const userMessage = userInput.value;
+      userInput.value = ''; // Clear input field
+      const userMessageObj = { type: 'user', text: userMessage };
+
+      // Add user message to chat history and local storage
+      chatHistory.innerHTML += `<div class="user-message">${userMessage}</div>`;
+      saveMessageToLocalStorage(userMessageObj);
+
+      const loader = document.getElementById('loader');
+      loader.style.display = 'block'; // Show the loader
+
+      try {
+        const response = await fetch('/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userInput: userMessage }),
+        });
+
+        const data = await response.json();
+        const botMessage = data.response;
+        const botMessageObj = { type: 'bot', text: botMessage };
+
+        // Add bot message to chat history and local storage
+        chatHistory.innerHTML += `<div class="bot-message">${botMessage}</div>`;
+        saveMessageToLocalStorage(botMessageObj);
+
+        // Scroll to the bottom of the chat history
+        chatHistory.scrollTop = chatHistory.scrollHeight;
+      } catch (error) {
+        console.error('Error:', error);
+        // Handle errors gracefully, e.g., display an error message to the user
+      } finally {
+        loader.style.display = 'none'; // Hide the loader
+      }
+    }
+
+    function saveMessageToLocalStorage(message) {
+      const history = JSON.parse(localStorage.getItem('chatHistory')) || [];
+      history.push(message);
+      localStorage.setItem('chatHistory', JSON.stringify(history));
+    }
+
+    form.addEventListener('submit', (event) => {
+      event.preventDefault(); // Prevent form submission
+      sendMessage();
+    });
+
+    // Load chat history on page load
+    loadChatHistory();
+  </script>
+</body>
+</html>
